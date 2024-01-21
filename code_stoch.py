@@ -5,8 +5,8 @@ from mpl_toolkits.mplot3d import Axes3D
 
 # Fonctions
 
-def tau_v(mp,nu,D_p):
-    tau_v = mp/(3*np.pi*nu*D_p)
+def tau_v(mp,nu,rho_p,D_p):
+    tau_v = mp/(3*np.pi*nu*rho_p*D_p)
     return tau_v
 
 def sigma(kB,T,mp):
@@ -40,9 +40,9 @@ kB = 1.38064852*10**(-23)
 T = 293
 
 D_p = [10*10**(-6), 20*10**(-6), 30*10**(-6)]
-#D_p = [20*10**(-6)] # m
+#D_p = [20*10**(-6) for k in range(100)] # m
 D_p_notation = [r'$10^{-5}$', r'$2.10^{-5}$', r'$3.10^{-5}$']
-#D_p_notation = [r'$2.10^{-5}$']
+#D_p_notation = [r'$2.10^{-5}$' for k in range(100)]
 rho_p = 1000 # kg/m^3
 
 #mp = 4/3*np.pi*(D_p/2)**3*rho_p
@@ -52,9 +52,11 @@ rho_p = 1000 # kg/m^3
 #Du = (2*sigma**2)/tau_v
 #
 #var_th = sigma**2
-#Ec_th = 3/2*kB*T
+Ec_th = 3/2*kB*T
 #print("var_th =", var_th)
-#print("Ec_th =", Ec_th)
+print("Ec_th =", Ec_th)
+Ec_th = 0.5*mp(D_p[0],rho_p)*sigma(kB,T,mp(D_p[0],rho_p))**2
+print("Ec_th =", Ec_th)
 #
 #print(tau_v)
 #print(Du)
@@ -84,17 +86,21 @@ for real in range(nb_realisation):
 
     D_p_real = D_p[real]
     mp_real = mp(D_p_real,rho_p)
-    tau_v_real = tau_v(mp_real,nu,D_p_real)
+    tau_v_real = tau_v(mp_real,nu,rho_p,D_p_real)
     L_tauv.append(tau_v_real)
     sigma_real = sigma(kB,T,mp_real)
     Du_real = Du(sigma_real,tau_v_real)
 
-    #delta_t = tau_v_real/10
-    delta_t = min([tau_v(mp(D_p[k],rho_p),nu,D_p[k]) for k in range(len(D_p))])
-    #nb_iteration = int(100*tau_v_real/delta_t)
-    nb_iteration = max([int(100*tau_v(mp(D_p[k],rho_p),nu,D_p[k])/delta_t) for k in range(len(D_p))])
+    print("D_p =", D_p_real)
+    print("tau_v =", tau_v_real)
+    print("sigma =", sigma_real)
 
-    u0 = np.array([0.001])
+    #delta_t = tau_v_real/10
+    delta_t = min([tau_v(mp(D_p[k],rho_p),nu,rho_p,D_p[k]) for k in range(len(D_p))])
+    #nb_iteration = int(100*tau_v_real/delta_t)
+    nb_iteration = max([int(100*tau_v(mp(D_p[k],rho_p),nu,rho_p,D_p[k])/delta_t) for k in range(len(D_p))])
+
+    u0 = np.array([0.00])
     ux1 = [u0 for k in range(nb_iteration)]
     uy1 = [u0 for k in range(nb_iteration)]
     uz1 = [u0 for k in range(nb_iteration)]
@@ -129,52 +135,57 @@ for real in range(nb_realisation):
     L_var[real] = np.var(ux1_fluct+uy1_fluct+uz1_fluct)
     L_pos_fin[real] = [x1[-1],y1[-1],z1[-1]]
 
-    print("D_p =", D_p_real)
+    #print("D_p =", D_p_real)
 
     var_th = sigma_real**2
     #Ec_th = 3/2*kB*T
     Ec_th = 0.5*mp_real*var_th 
-    print("var_th =", var_th)
-    print("Ec_th =", Ec_th)
+    #print("var_th =", var_th)
+    #print("Ec_th =", Ec_th)
 
     var_tot = L_var[real]  
     Ec_pr = 0.5*mp_real*var_tot
-    print("var_pr =", var_tot)
-    print("Ec_pr =", Ec_pr)
+    #print("var_pr =", var_tot)
+    #print("Ec_pr =", Ec_pr)
 
 
 ## On suppose le problème isotrope
 #
-#u_tot = ux1 #+uy1+uz1
+u_tot = ux1+uy1+uz1
 #
 ## Statistiques
 #
-#plt.figure(0)
-#plt.subplot(2,1,1)
-#plt.plot(L_var,'+')
-#plt.title("Variance des vitesses")
-#plt.xlabel("Numéro de la réalisation")
-#plt.ylabel("Variance")
-#plt.subplot(2,1,2)
-#plt.plot(L_var,'+')
-#plt.title("Variance des vitesses")
-#plt.xlabel("Numéro de la réalisation")
-#plt.ylabel("Variance")
+plt.figure(0)
+plt.plot(L_var,'+')
+plt.title("Variance des vitesses")
+plt.xlabel("Numéro de la réalisation")
+plt.ylabel("Variance")
+#Ajouter une ligne sur la moyenne de la liste
+plt.axhline(y=np.mean(L_var), color='r', linestyle='-', label="Moyenne")
+plt.axhline(y=2*sigma_real**2, color='b', linestyle='-', label="Théorie")
+plt.legend()
 #
 #
-#var_tot = np.var(L_var)
-#Ec_pr = 0.5*mp*var_tot
-#print("var_pr =", var_tot)
-#print("Ec_pr =", Ec_pr)
-#
-#L_dist = [np.sqrt(pos[0]**2+pos[1]**2+pos[2]**2) for pos in L_pos_fin]
-#moy_dist = np.mean(L_dist)
-#print("moy_dist =", moy_dist)
-#
-#plt.figure(2)
-#plt.plot(L_dist,'+')
-#plt.xlabel("Numéro de la réalisation")
-#plt.ylabel("Distance au point de départ de la particule")
+var_tot = np.var(L_var)
+Ec_pr = 0.5*mp_real*var_tot
+print("var_pr =", var_tot)
+print("Ec_pr =", Ec_pr)
+
+L_dist = [np.sqrt(pos[0]**2+pos[1]**2+pos[2]**2) for pos in L_pos_fin]
+moy_dist = np.mean(L_dist)
+print("moy_dist =", moy_dist)
+
+print("variance distance = ", variance(L_dist))  
+print("variance théorique = ",2*tau_v_real*delta_t*nb_iteration*sigma_real**2)
+
+plt.figure(2)
+plt.plot(L_dist,'+')
+plt.xlabel("Numéro de la réalisation")
+plt.ylabel("Distance au point de départ de la particule")
+# Ajouter une ligne sur la moyenne de la liste
+plt.axhline(y=moy_dist, color='r', linestyle='-')
+plt.axhline(y=2*tau_v_real*delta_t*nb_iteration*sigma_real**2, color='g', linestyle='-', label="Théorie")
+plt.legend()
 #
 ## Courbes
 #    
@@ -194,8 +205,8 @@ for real in range(nb_realisation):
 #
 #plt.figure(5)
 #plt.hist(ux1, bins=50)
-#plt.title("Histogramme des vitesses selon x")
-#plt.xlabel("Vitesse selon x")
+#plt.title("Histogramme des vitesses pour une réalisation")
+#plt.xlabel("Vitesse")
 #plt.ylabel("Nombre de réalisations")
 #
 #plt.figure(6)
@@ -207,29 +218,29 @@ for real in range(nb_realisation):
 #f = Fitter(u_tot,distributions= ['norm'])
 #f.fit()
 #f.summary()
-#
+
 
 # Graphique 3D des trajectoires
 
-plt.figure(7)
-ax = plt.axes(projection='3d')
-for real in range(nb_realisation):
-    x1 = L_pos_x[real]
-    y1 = L_pos_y[real]
-    z1 = L_pos_z[real]
-    ax.plot3D(x1,y1,z1,label=r'D_p ='+ str(D_p_notation[real])+ " m")
-ax.set_xlabel('x')
-ax.set_ylabel('y')
-ax.set_zlabel('z')
-ax.legend()
+#plt.figure(7)
+#ax = plt.axes(projection='3d')
+#for real in range(nb_realisation):
+#    x1 = L_pos_x[real]
+#    y1 = L_pos_y[real]
+#    z1 = L_pos_z[real]
+#    ax.plot3D(x1,y1,z1,label=r'D_p ='+ str(D_p_notation[real])+ " m")
+#ax.set_xlabel('x')
+#ax.set_ylabel('y')
+#ax.set_zlabel('z')
+#ax.legend()
 
-plt.figure(8)
-plt.plot([k*delta_t for k in range(len(x1))],x1)
-plt.xlabel("Temps [s]")
-plt.ylabel("Position [m]")
-plt.title("Position projetée sur x")
+#plt.figure(8)
+#plt.plot([k*delta_t for k in range(len(x1))],x1)
+#plt.xlabel("Temps [s]")
+#plt.ylabel("Position [m]")
+#plt.title("Position projetée sur x")
 
-print(D_p)
-print(L_tauv)
+#print("D_p", D_p)
+#print("L_tauv", L_tauv)
 
 plt.show()
